@@ -1,11 +1,18 @@
-// A working news-image-daily entry (Node 22, standard library only): its image is the entry.png beside this file, and
-// the program copies it to /output/entry.png. A starting point, not a winner: replace the image. The gate takes a
-// whole PNG or JPEG of at most 1 MiB and 1024 by 1024 pixels, and the judge sees exactly the bytes copied.
-//
-// Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
-//   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
+import * as fs from 'node:fs';
+import { createHash } from 'node:crypto';
+import { dirname, resolve } from 'node:path';
 
-import { copyFileSync } from 'node:fs';
-import { join } from 'node:path';
+const imageBytes = fs.readFileSync(new URL('entry.png', import.meta.url));
+const suppliedImageSha256 = 'e9e9a5a18aa036ed18d1651336223709c39718a50eaee2dbb7fc8e0fec68692e';
 
-copyFileSync(new URL('./entry.png', import.meta.url), join(process.env.MAKEFUN_OUTPUT_DIR ?? '/output', 'entry.png'));
+if (imageBytes.length > 1_048_576) {
+  throw new Error('The supplied image exceeds the competition size limit.');
+}
+if (createHash('sha256').update(imageBytes).digest('hex') !== suppliedImageSha256) {
+  throw new Error('The supplied image bytes have changed.');
+}
+
+const outputFile = resolve(process.env.MAKEFUN_OUTPUT_DIR ?? '/output', 'entry.png');
+
+fs.mkdirSync(dirname(outputFile), { recursive: true });
+fs.writeFileSync(outputFile, imageBytes);
